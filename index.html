@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 முழுமையான பங்குச் சந்தை பகுப்பாய்வு | Stock Market Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        :root {
+            --primary-blue: #1e3a8a;
+            --secondary-blue: #3b82f6;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --strong-sell-color: #991b1b;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; }
+        .header-section { background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 20px 0; text-align: center; margin-bottom: 25px; }
+        .upload-zone { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 25px; }
+        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .file-card { border: 2px dashed #ccc; padding: 12px; border-radius: 10px; text-align: center; background: #f9fafb; cursor: pointer; }
+        .file-card.loaded { border-color: #10b981; background: #f0fff4; }
+        .file-card.required { border-color: #ef4444; }
+        .stat-box { background: white; border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-bottom: 4px solid #3b82f6; }
+        .filter-section { background: white; border-radius: 12px; padding: 15px; margin-bottom: 20px; }
+        .series-badge { background: #3b82f6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; }
+        .target-badge { background: #10b981; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; }
+        .stop-loss-badge { background: #ef4444; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; }
+        .sell-target-badge { background: #ef4444; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; }
+        .sell-stop-loss-badge { background: #10b981; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; }
+        .score-high { background: #10b981; color: white; padding: 3px 8px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .score-mid-high { background: #34d399; color: white; padding: 3px 8px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .score-mid { background: #f59e0b; color: white; padding: 3px 8px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .score-mid-low { background: #f97316; color: white; padding: 3px 8px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .score-low { background: #ef4444; color: white; padding: 3px 8px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .positive { color: #10b981; font-weight: bold; }
+        .negative { color: #ef4444; font-weight: bold; }
+        .reason-highlight { background: #fef3c7; padding: 4px 8px; border-radius: 6px; border-left: 3px solid #f59e0b; }
+        .whatsapp-icon { color: #25D366; font-size: 20px; text-decoration: none; }
+        .print-btn { background: #6b7280; color: white; border: none; padding: 8px 16px; border-radius: 25px; }
+        
+        .recommend-strongbuy { background: #10b981; color: white; padding: 2px 10px; border-radius: 15px; font-size: 11px; font-weight: bold; }
+        .recommend-buy { background: #34d399; color: white; padding: 2px 10px; border-radius: 15px; font-size: 11px; font-weight: bold; }
+        .recommend-hold { background: #f59e0b; color: white; padding: 2px 10px; border-radius: 15px; font-size: 11px; font-weight: bold; }
+        .recommend-caution { background: #f97316; color: white; padding: 2px 10px; border-radius: 15px; font-size: 11px; font-weight: bold; }
+        .recommend-weak-sell { background: #dc2626; color: white; padding: 2px 10px; border-radius: 15px; font-size: 11px; font-weight: bold; }
+        .recommend-strongsell { background: #991b1b; color: white; padding: 2px 10px; border-radius: 15px; font-size: 11px; font-weight: bold; }
+        
+        .top-stock-item { background: white; border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex-wrap: wrap; gap: 10px; }
+        .badge-custom { padding: 4px 12px; border-radius: 20px; font-size: 11px; color: white; }
+        @media print { .no-print { display: none; } }
+        .table-responsive { max-height: 600px; overflow-y: auto; }
+        th { position: sticky; top: 0; background: #1e293b; z-index: 10; }
+        .score-info { background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: center; }
+        .selected-count-badge { background: #8b5cf6; color: white; padding: 5px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; }
+        .whatsapp-share-all { background: #25D366; color: white; border: none; padding: 8px 16px; border-radius: 25px; font-weight: bold; }
+        .top-stocks-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 15px; }
+        .select-all-checkbox { margin-right: 8px; transform: scale(1.2); }
+    </style>
+</head>
+<body>
+
+<div class="header-section">
+    <h2><i class="fas fa-chart-line"></i> முழுமையான பங்குச் சந்தை பகுப்பாய்வு</h2>
+    <p>7 CSV கோப்புகளை ஒப்பிட்டு | ⭐ 0-100 ஸ்கோர் | 🎯 Target & Stop Loss | STRONG BUY ➡ STRONG SELL வரை</p>
+</div>
+
+<div class="container">
+    <div class="upload-zone">
+        <h5><i class="fas fa-upload"></i> CSV கோப்புகளை பதிவேற்றவும்</h5>
+        <div class="file-grid" id="fileGrid"></div>
+        <div class="row">
+            <div class="col-md-4"><button class="btn btn-info w-100" onclick="checkColumns()"><i class="fas fa-search"></i> CSV சரிபார்க்க</button></div>
+            <div class="col-md-4"><button class="btn btn-warning w-100" onclick="loadFromLocalStorage()"><i class="fas fa-history"></i> முந்தைய தரவு ஏற்று</button></div>
+            <div class="col-md-4"><button class="btn btn-primary btn-lg w-100" onclick="analyzeEverything()"><i class="fas fa-chart-line"></i> பகுப்பாய்வு செய்க</button></div>
+        </div>
+        <div id="uploadStatus" class="mt-2 text-center"></div>
+        <div id="columnInfo" class="alert alert-info mt-2" style="display:none;"></div>
+    </div>
+
+    <div id="dashboard" style="display:none;">
+        
+        <!-- Score Info Box -->
+        <div class="score-info no-print">
+            <strong>⭐ ஸ்கோர் விளக்கம் (0-100):</strong> 
+            80-100: STRONG BUY | 65-79: BUY | 50-64: HOLD | 35-49: WEAK SELL | 0-34: STRONG SELL
+        </div>
+
+        <!-- Statistics -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-2"><div class="stat-box"><h6 class="text-muted">மொத்த EQ</h6><h3 id="totalS">0</h3></div></div>
+            <div class="col-md-2"><div class="stat-box" style="border-color:#10b981"><h6 class="text-muted">STRONG BUY</h6><h3 id="strongBuyS" class="text-success">0</h3></div></div>
+            <div class="col-md-2"><div class="stat-box" style="border-color:#34d399"><h6 class="text-muted">BUY</h6><h3 id="buyS" class="text-success">0</h3></div></div>
+            <div class="col-md-2"><div class="stat-box" style="border-color:#f59e0b"><h6 class="text-muted">HOLD</h6><h3 id="holdS" class="text-warning">0</h3></div></div>
+            <div class="col-md-2"><div class="stat-box" style="border-color:#f97316"><h6 class="text-muted">WEAK SELL</h6><h3 id="weakSellS" class="text-warning">0</h3></div></div>
+            <div class="col-md-2"><div class="stat-box" style="border-color:#991b1b"><h6 class="text-muted">STRONG SELL</h6><h3 id="strongSellS" class="text-danger">0</h3></div></div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-section no-print">
+            <div class="row g-2">
+                <div class="col-md-3"><input type="text" id="search" class="form-control" placeholder="🔍 பங்கு தேடுக..."></div>
+                <div class="col-md-2">
+                    <select id="sigFilter" class="form-select">
+                        <option value="ALL">அனைத்து சிக்னல்கள்</option>
+                        <option value="STRONG BUY">STRONG BUY</option>
+                        <option value="BUY">BUY</option>
+                        <option value="HOLD">HOLD</option>
+                        <option value="WEAK SELL">WEAK SELL</option>
+                        <option value="STRONG SELL">STRONG SELL</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select id="scoreFilter" class="form-select">
+                        <option value="ALL">அனைத்து ஸ்கோர்</option>
+                        <option value="STRONG_BUY">80+ (STRONG BUY)</option>
+                        <option value="BUY">65-79 (BUY)</option>
+                        <option value="HOLD">50-64 (HOLD)</option>
+                        <option value="WEAK_SELL">35-49 (WEAK SELL)</option>
+                        <option value="STRONG_SELL">0-34 (STRONG SELL)</option>
+                    </select>
+                </div>
+                <div class="col-md-2"><button class="btn btn-warning w-100" onclick="showHighlightedStocks()"><i class="fas fa-star"></i> முக்கிய பங்குகள்</button></div>
+                <div class="col-md-2"><button class="btn btn-success w-100" onclick="exportData()"><i class="fas fa-download"></i> CSV ஏற்றுக</button></div>
+                <div class="col-md-1"><button class="btn btn-secondary w-100" onclick="saveToLocalStorage()"><i class="fas fa-save"></i> சேமி</button></div>
+            </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th><th>பங்கு</th><th>விலை</th><th>மாற்றம்%</th><th>Series</th><th>சிக்னல்</th><th>⭐ ஸ்கோர்</th><th>பரிந்துரை</th><th>காரணங்கள்</th><th>🎯 Target</th><th>⛔ Stop Loss</th><th>பகிர்</th>
+                    </tr>
+                </thead>
+                <tbody id="results"></tbody>
+            </table>
+        </div>
+        <div id="noResults" class="alert alert-info text-center" style="display:none;">📭 பங்குகள் இல்லை</div>
+        <nav><ul class="pagination justify-content-center" id="pagination"></ul></nav>
+    </div>
+
+    <!-- Top Stocks Section with Select All and Share -->
+    <div id="topStocksSection" style="display:none; background: white; border-radius: 12px; padding: 20px; margin-top: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <div class="top-stocks-header">
+            <h5 class="mb-0"><i class="fas fa-star text-warning"></i> முக்கிய பங்குகள் (⭐ ஸ்கோர் + காரணங்கள்)</h5>
+            <div>
+                <span class="selected-count-badge me-2" id="selectedCountBadge" style="display:none;">0 தேர்ந்தெடுக்கப்பட்டது</span>
+                <button class="btn print-btn me-2" onclick="printSelectedStocks()"><i class="fas fa-print"></i> பிரிண்ட்</button>
+                <button class="btn whatsapp-share-all" onclick="shareSelectedStocks()"><i class="fab fa-whatsapp"></i> WhatsApp பகிர்</button>
+            </div>
+        </div>
+        
+        <!-- Score Info inside top stocks -->
+        <div class="alert alert-info mt-2 mb-3">
+            <div class="form-check mb-2">
+                <input class="form-check-input select-all-checkbox" type="checkbox" id="selectAllTopStocks" onchange="toggleSelectAllTopStocks()">
+                <label class="form-check-label fw-bold" for="selectAllTopStocks">
+                    <i class="fas fa-check-square"></i> அனைத்து முக்கிய பங்குகளையும் தேர்ந்தெடுக்க
+                </label>
+            </div>
+            <hr class="my-2">
+            <i class="fas fa-info-circle"></i> <strong>⭐ ஸ்கோர் விளக்கம்:</strong> 
+            80-100: STRONG BUY | 65-79: BUY | 50-64: HOLD | 35-49: WEAK SELL | 0-34: STRONG SELL
+            <br>
+            <i class="fas fa-bullseye"></i> <strong>🎯 Target & ⛔ Stop Loss:</strong>
+            BUY: Target = விலை + (மாற்றம்×1.5) | SL = விலை - (மாற்றம்×1.0) &nbsp;&nbsp;|&nbsp;&nbsp;
+            SELL: Target = விலை - (மாற்றம்×1.0) | SL = விலை + (மாற்றம்×1.5)
+        </div>
+        
+        <div id="topStocksList"></div>
+        <button class="btn btn-secondary mt-3" onclick="document.getElementById('topStocksSection').style.display='none'"><i class="fas fa-times"></i> மூடு</button>
+    </div>
+</div>
+
+<script>
+    // File names
+    const fileNames = ["52WeekHigh", "52WeekLow", "Upper Band", "Lower Band", "T20-gainers", "T20-loosers", "StocksTraded"];
+    let storage = {};
+    let finalArray = [];
+    let highlightedStocks = [];
+    let selectedTopStocks = new Set();
+    let currentPage = 1;
+    const itemsPerPage = 50;
+    let columnMapping = { symbol: null, price: null, changePct: null, series: null };
+    const STORAGE_KEY = 'stockAnalysisData';
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const grid = document.getElementById('fileGrid');
+        fileNames.forEach((name, i) => {
+            grid.innerHTML += `<div class="file-card" id="box-${i}">
+                <i class="fas fa-file-csv fa-2x"></i>
+                <div>${name}</div>
+                <input type="file" accept=".csv" onchange="readCSV(event, '${name}', ${i})" style="display:none;">
+                <div id="preview-${i}" class="small text-muted"></div>
+            </div>`;
+        });
+        for(let i=0; i<fileNames.length; i++) {
+            document.getElementById(`box-${i}`).onclick = () => document.querySelector(`#box-${i} input`).click();
+        }
+        document.getElementById('search').addEventListener('keyup', () => { currentPage=1; render(); });
+        document.getElementById('sigFilter').addEventListener('change', () => { currentPage=1; render(); });
+        document.getElementById('scoreFilter').addEventListener('change', () => { currentPage=1; render(); });
+        
+        let saved = localStorage.getItem(STORAGE_KEY);
+        if(saved) document.getElementById('uploadStatus').innerHTML = `<div class="alert alert-info">💾 முன்னர் சேமித்த தரவு உள்ளது. <button class="btn btn-sm btn-primary" onclick="loadFromLocalStorage()">ஏற்று</button></div>`;
+    });
+
+    function readCSV(event, type, idx) {
+        const file = event.target.files[0];
+        if(!file) return;
+        Papa.parse(file, { header: true, skipEmptyLines: true, complete: (res) => {
+            let data = res.data.map(r => { let obj={}; for(let k in r) obj[k.toLowerCase().trim()] = r[k]; return obj; }).filter(r => Object.keys(r).length>0);
+            storage[type] = data;
+            document.getElementById(`preview-${idx}`).innerHTML = `✅ ${data.length} rows`;
+            document.getElementById(`box-${idx}`).classList.add('loaded');
+            if(type === "StocksTraded" && data.length) autoDetectColumns(data[0]);
+        }});
+    }
+
+    function autoDetectColumns(row) {
+        let keys = Object.keys(row);
+        let symbolKeys = ['symbol','ticker','scrip','name','security'];
+        let priceKeys = ['ltp','last price','close','price','cmp'];
+        let pctKeys = ['%chng','pct_chg','%change','percent change','change%'];
+        let seriesKeys = ['series','ser','type'];
+        
+        columnMapping.symbol = keys.find(k => symbolKeys.some(s => k.includes(s))) || keys[0];
+        columnMapping.price = keys.find(k => priceKeys.some(p => k.includes(p))) || keys[1];
+        columnMapping.changePct = keys.find(k => pctKeys.some(p => k.includes(p))) || null;
+        columnMapping.series = keys.find(k => seriesKeys.some(s => k.includes(s))) || null;
+        
+        document.getElementById('columnInfo').innerHTML = `<strong>✅ கண்டறியப்பட்ட நெடுவரிசைகள்:</strong><br>
+        📌 பங்கு பெயர்: ${columnMapping.symbol}<br>
+        📌 விலை: ${columnMapping.price}<br>
+        📌 மாற்றம்%: ${columnMapping.changePct || 'கணக்கிடப்படும்'}<br>
+        📌 Series: ${columnMapping.series || 'EQ மட்டும்'}`;
+        document.getElementById('columnInfo').style.display = 'block';
+        setTimeout(() => document.getElementById('columnInfo').style.display = 'none', 5000);
+    }
+
+    function checkColumns() {
+        if(!storage["StocksTraded"]) { alert("StocksTraded.csv பதிவேற்றவும்"); return; }
+        autoDetectColumns(storage["StocksTraded"][0]);
+        alert("நெடுவரிசைகள் கண்டறியப்பட்டன! பகுப்பாய்வு செய்யலாம்.");
+    }
+
+    function parseNumber(val) { if(!val) return 0; let n = parseFloat(String(val).replace(/%|,/g, '')); return isNaN(n)?0:n; }
+    
+    function calculateScore(stock) {
+        let score = 50;
+        let pct = stock.rawPct;
+        let reasons = stock.reasonCount || 0;
+        
+        if(pct >= 10) score += 25;
+        else if(pct >= 5) score += 20;
+        else if(pct >= 2) score += 10;
+        else if(pct >= 0) score += 5;
+        else if(pct <= -10) score -= 25;
+        else if(pct <= -5) score -= 20;
+        else if(pct <= -2) score -= 10;
+        else if(pct < 0) score -= 5;
+        
+        if(reasons >= 4) score += 30;
+        else if(reasons >= 3) score += 20;
+        else if(reasons >= 2) score += 10;
+        else if(reasons >= 1) score += 5;
+        
+        if(stock.is52H) score += 15;
+        if(stock.is52L) score -= 15;
+        if(stock.isUpper) score += 10;
+        if(stock.isLower) score -= 10;
+        if(stock.isT20G) score += 20;
+        if(stock.isT20L) score -= 20;
+        
+        return Math.min(100, Math.max(0, score));
+    }
+    
+    function getRecommendation(score) {
+        if(score >= 80) return { text: "STRONG BUY", class: "recommend-strongbuy", signal: "STRONG BUY" };
+        if(score >= 65) return { text: "BUY", class: "recommend-buy", signal: "BUY" };
+        if(score >= 50) return { text: "HOLD", class: "recommend-hold", signal: "HOLD" };
+        if(score >= 35) return { text: "WEAK SELL", class: "recommend-weak-sell", signal: "WEAK SELL" };
+        return { text: "STRONG SELL", class: "recommend-strongsell", signal: "STRONG SELL" };
+    }
+    
+    function getScoreClass(score) {
+        if(score >= 80) return "score-high";
+        if(score >= 65) return "score-mid-high";
+        if(score >= 50) return "score-mid";
+        if(score >= 35) return "score-mid-low";
+        return "score-low";
+    }
+
+    function analyzeEverything() {
+        let master = storage["StocksTraded"];
+        if(!master) { alert("StocksTraded.csv பதிவேற்றவும்"); return; }
+        if(!columnMapping.symbol || !columnMapping.price) { autoDetectColumns(master[0]); }
+        
+        let eqCount = 0;
+        highlightedStocks = [];
+        finalArray = [];
+        selectedTopStocks.clear();
+        
+        for(let row of master) {
+            let symbol = row[columnMapping.symbol];
+            if(!symbol) continue;
+            
+            let seriesVal = columnMapping.series ? String(row[columnMapping.series]).toUpperCase() : 'EQ';
+            if(seriesVal !== 'EQ') continue;
+            eqCount++;
+            
+            let ltp = parseNumber(row[columnMapping.price]);
+            let pct = columnMapping.changePct ? parseNumber(row[columnMapping.changePct]) : 0;
+            let changeAmt = (ltp * pct) / 100;
+            
+            let is52H = storage["52WeekHigh"]?.some(d => String(d[Object.keys(d)[0]]).toUpperCase() === symbol.toUpperCase()) || false;
+            let is52L = storage["52WeekLow"]?.some(d => String(d[Object.keys(d)[0]]).toUpperCase() === symbol.toUpperCase()) || false;
+            let isUpper = storage["Upper Band"]?.some(d => String(d[Object.keys(d)[0]]).toUpperCase() === symbol.toUpperCase()) || false;
+            let isLower = storage["Lower Band"]?.some(d => String(d[Object.keys(d)[0]]).toUpperCase() === symbol.toUpperCase()) || false;
+            let isT20G = storage["T20-gainers"]?.some(d => String(d[Object.keys(d)[0]]).toUpperCase() === symbol.toUpperCase()) || false;
+            let isT20L = storage["T20-loosers"]?.some(d => String(d[Object.keys(d)[0]]).toUpperCase() === symbol.toUpperCase()) || false;
+            
+            let reasons = [];
+            if(is52H) reasons.push("52 வார உயர்வு");
+            if(isUpper) reasons.push("மேல் பட்டை");
+            if(isT20G) reasons.push("Top 20 லாபம்");
+            if(pct > 2) reasons.push(`${pct.toFixed(2)}% உயர்வு`);
+            if(is52L) reasons.push("52 வார தாழ்வு");
+            if(isLower) reasons.push("கீழ் பட்டை");
+            if(isT20L) reasons.push("Top 20 நஷ்டம்");
+            if(pct < -2) reasons.push(`${pct.toFixed(2)}% சரிவு`);
+            
+            let reasonCount = reasons.length;
+            
+            let tempStock = {
+                rawPct: pct,
+                reasonCount: reasonCount,
+                is52H, is52L, isUpper, isLower, isT20G, isT20L
+            };
+            let tempScore = calculateScore(tempStock);
+            let rec = getRecommendation(tempScore);
+            let signal = rec.signal;
+            let color = (signal === "STRONG BUY" || signal === "BUY") ? "#10b981" : (signal === "STRONG SELL" ? "#991b1b" : (signal === "WEAK SELL" ? "#dc2626" : "#f59e0b"));
+            
+            let target = 0, stopLoss = 0;
+            if(signal === "STRONG BUY" || signal === "BUY") {
+                target = ltp + (Math.abs(changeAmt) * 1.5);
+                stopLoss = ltp - (Math.abs(changeAmt) * 1.0);
+            } else if(signal === "STRONG SELL" || signal === "WEAK SELL") {
+                target = ltp - (Math.abs(changeAmt) * 1.0);
+                stopLoss = ltp + (Math.abs(changeAmt) * 1.5);
+            }
+            
+            let stock = {
+                symbol: symbol.trim(),
+                ltp: ltp.toFixed(2),
+                pct: pct.toFixed(2),
+                rawPct: pct,
+                series: seriesVal,
+                signal: signal,
+                color: color,
+                reason: reasons.join(", ") || "நடுநிலை",
+                reasonCount: reasonCount,
+                is52H, is52L, isUpper, isLower, isT20G, isT20L,
+                target: target > 0 ? target.toFixed(2) : "0",
+                stopLoss: stopLoss > 0 ? stopLoss.toFixed(2) : "0"
+            };
+            stock.score = calculateScore(stock);
+            let recFinal = getRecommendation(stock.score);
+            stock.recommendation = recFinal.text;
+            stock.recClass = recFinal.class;
+            stock.signal = recFinal.signal;
+            
+            finalArray.push(stock);
+            if(reasonCount >= 1) highlightedStocks.push(stock);
+        }
+        
+        highlightedStocks.sort((a,b) => b.score - a.score);
+        
+        document.getElementById('dashboard').style.display = 'block';
+        document.getElementById('totalS').innerHTML = eqCount;
+        render();
+        saveToLocalStorage();
+        if(highlightedStocks.length) showHighlightedStocks();
+    }
+    
+    function render() {
+        let data = [...finalArray];
+        let search = document.getElementById('search').value.toUpperCase();
+        let sigFilter = document.getElementById('sigFilter').value;
+        let scoreFilter = document.getElementById('scoreFilter').value;
+        
+        data = data.filter(d => {
+            if(search && !d.symbol.toUpperCase().includes(search)) return false;
+            if(sigFilter !== 'ALL' && d.signal !== sigFilter) return false;
+            if(scoreFilter === 'STRONG_BUY' && d.score < 80) return false;
+            if(scoreFilter === 'BUY' && (d.score < 65 || d.score >= 80)) return false;
+            if(scoreFilter === 'HOLD' && (d.score < 50 || d.score >= 65)) return false;
+            if(scoreFilter === 'WEAK_SELL' && (d.score < 35 || d.score >= 50)) return false;
+            if(scoreFilter === 'STRONG_SELL' && d.score >= 35) return false;
+            return true;
+        });
+        
+        let strongBuy = data.filter(d=>d.signal==='STRONG BUY').length;
+        let buy = data.filter(d=>d.signal==='BUY').length;
+        let hold = data.filter(d=>d.signal==='HOLD').length;
+        let weakSell = data.filter(d=>d.signal==='WEAK SELL').length;
+        let strongSell = data.filter(d=>d.signal==='STRONG SELL').length;
+        
+        document.getElementById('strongBuyS').innerHTML = strongBuy;
+        document.getElementById('buyS').innerHTML = buy;
+        document.getElementById('holdS').innerHTML = hold;
+        document.getElementById('weakSellS').innerHTML = weakSell;
+        document.getElementById('strongSellS').innerHTML = strongSell;
+        
+        let totalPages = Math.ceil(data.length / itemsPerPage);
+        let start = (currentPage-1)*itemsPerPage;
+        let pageData = data.slice(start, start+itemsPerPage);
+        
+        let html = '';
+        pageData.forEach((item, i) => {
+            let pctClass = item.rawPct >= 0 ? 'positive' : 'negative';
+            let scoreClass = getScoreClass(item.score);
+            let targetClass = (item.signal === "STRONG BUY" || item.signal === "BUY") ? "target-badge" : "sell-target-badge";
+            let slClass = (item.signal === "STRONG BUY" || item.signal === "BUY") ? "stop-loss-badge" : "sell-stop-loss-badge";
+            let waMsg = `📊 ${item.symbol}%0A💰 விலை: ₹${item.ltp}%0A📈 மாற்றம்: ${item.pct}%%0A🎯 சிக்னல்: ${item.signal}%0A⭐ ஸ்கோர்: ${item.score}/100%0A💡 பரிந்துரை: ${item.recommendation}%0A🎯 Target: ₹${item.target}%0A⛔ Stop Loss: ₹${item.stopLoss}%0A📌 காரணம்: ${item.reason}`;
+            html += `<tr>
+                <td>${start+i+1}</td>
+                <td><strong>${item.symbol}</strong></td>
+                <td>₹${item.ltp}</td>
+                <td class="${pctClass}">${item.rawPct>=0?'+':''}${item.pct}%</td>
+                <td><span class="series-badge">${item.series}</span></td>
+                <td><span class="badge-custom" style="background:${item.color}">${item.signal}</span></td>
+                <td><span class="${scoreClass}">⭐ ${item.score}</span></td>
+                <td><span class="${item.recClass}">${item.recommendation}</span></td>
+                <td><div class="reason-highlight">${item.reason}<br>${item.reasonCount>0?`<span class="badge bg-warning mt-1">${item.reasonCount} காரணம்</span>`:''}</div></td>
+                <td>${item.target!='0'?`<span class="${targetClass}">₹${item.target}</span>`:'-'}</td>
+                <td>${item.stopLoss!='0'?`<span class="${slClass}">₹${item.stopLoss}</span>`:'-'}</td>
+                <td><a href="https://wa.me/?text=${waMsg}" target="_blank" class="whatsapp-icon"><i class="fab fa-whatsapp fa-lg"></i></a></td>
+            </tr>`;
+        });
+        
+        document.getElementById('results').innerHTML = html || '<tr><td colspan="12" class="text-center">📭 பங்குகள் இல்லை</td></tr>';
+        
+        let pagHtml = '';
+        if(totalPages > 1) {
+            pagHtml += `<li class="page-item ${currentPage===1?'disabled':''}"><a class="page-link" href="#" onclick="changePage(1)">முதல்</a></li>`;
+            pagHtml += `<li class="page-item ${currentPage===1?'disabled':''}"><a class="page-link" href="#" onclick="changePage(${currentPage-1})">←</a></li>`;
+            for(let i=Math.max(1,currentPage-2); i<=Math.min(totalPages,currentPage+2); i++) {
+                pagHtml += `<li class="page-item ${i===currentPage?'active':''}"><a class="page-link" href="#" onclick="changePage(${i})">${i}</a></li>`;
+            }
+            pagHtml += `<li class="page-item ${currentPage===totalPages?'disabled':''}"><a class="page-link" href="#" onclick="changePage(${currentPage+1})">→</a></li>`;
+            pagHtml += `<li class="page-item ${currentPage===totalPages?'disabled':''}"><a class="page-link" href="#" onclick="changePage(${totalPages})">கடைசி</a></li>`;
+        }
+        document.getElementById('pagination').innerHTML = pagHtml;
+    }
+    
+    function changePage(p) { currentPage = p; render(); window.scrollTo({top: 0, behavior: 'smooth'}); }
+    
+    function showHighlightedStocks() {
+        let section = document.getElementById('topStocksSection');
+        let list = document.getElementById('topStocksList');
+        if(highlightedStocks.length === 0) { alert("முக்கிய பங்குகள் இல்லை"); return; }
+        section.style.display = 'block';
+        updateTopStocksList();
+        section.scrollIntoView({behavior: 'smooth'});
+    }
+    
+    function updateTopStocksList() {
+        let list = document.getElementById('topStocksList');
+        let html = '';
+        highlightedStocks.forEach((s, idx) => {
+            let scoreClass = getScoreClass(s.score);
+            let targetClass = (s.signal === "STRONG BUY" || s.signal === "BUY") ? "target-badge" : "sell-target-badge";
+            let slClass = (s.signal === "STRONG BUY" || s.signal === "BUY") ? "stop-loss-badge" : "sell-stop-loss-badge";
+            let isChecked = selectedTopStocks.has(idx) ? 'checked' : '';
+            html += `<div class="top-stock-item">
+                <div style="flex:0.3;"><input class="form-check-input top-stock-checkbox" type="checkbox" data-index="${idx}" ${isChecked} onchange="toggleTopStockSelection(this)"></div>
+                <div style="flex:2;"><strong>${idx+1}. ${s.symbol}</strong><br><small>₹${s.ltp} | ${s.pct}%</small><br><small class="text-muted">${s.reason.substring(0,60)}</small></div>
+                <div style="text-align:center"><span class="${scoreClass}">⭐ ${s.score}</span><br><span class="${s.recClass} mt-1">${s.recommendation}</span></div>
+                <div style="text-align:center"><span class="${targetClass}">🎯 ₹${s.target}</span><br><span class="${slClass}">⛔ ₹${s.stopLoss}</span></div>
+                <div><span class="badge-custom" style="background:${s.color}">${s.signal}</span><br><span class="badge bg-warning mt-1">${s.reasonCount}</span></div>
+            </div>`;
+        });
+        list.innerHTML = html;
+        updateSelectedCount();
+    }
+    
+    function toggleSelectAllTopStocks() {
+        let chk = document.getElementById('selectAllTopStocks');
+        let boxes = document.querySelectorAll('.top-stock-checkbox');
+        if(chk.checked) {
+            selectedTopStocks.clear();
+            highlightedStocks.forEach((_, idx) => selectedTopStocks.add(idx));
+            boxes.forEach(cb => cb.checked = true);
+        } else {
+            selectedTopStocks.clear();
+            boxes.forEach(cb => cb.checked = false);
+        }
+        updateSelectedCount();
+    }
+    
+    function toggleTopStockSelection(checkbox) {
+        let idx = parseInt(checkbox.getAttribute('data-index'));
+        if(checkbox.checked) selectedTopStocks.add(idx);
+        else selectedTopStocks.delete(idx);
+        updateSelectedCount();
+        let selectAll = document.getElementById('selectAllTopStocks');
+        if(selectAll) selectAll.checked = (selectedTopStocks.size === highlightedStocks.length);
+    }
+    
+    function updateSelectedCount() {
+        let badge = document.getElementById('selectedCountBadge');
+        if(selectedTopStocks.size > 0) {
+            badge.textContent = `${selectedTopStocks.size} தேர்ந்தெடுக்கப்பட்டது`;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+    
+    function printSelectedStocks() {
+        if(selectedTopStocks.size === 0) { alert("முதலில் பங்குகளைத் தேர்ந்தெடுக்கவும்"); return; }
+        let stocks = Array.from(selectedTopStocks).sort().map(i => highlightedStocks[i]);
+        let printWindow = window.open('', '_blank');
+        let html = `<html><head><title>Selected Stocks Report</title><style>
+            body{font-family:Arial;padding:20px} table{border-collapse:collapse;width:100%}
+            th,td{border:1px solid #ddd;padding:8px} th{background:#f2f2f2}
+            .target-badge{background:#10b981;color:white;padding:2px 6px;border-radius:10px}
+            .sell-target-badge{background:#ef4444;color:white;padding:2px 6px;border-radius:10px}
+        </style></head><body>
+        <h2>📊 தேர்ந்தெடுக்கப்பட்ட பங்குகள் அறிக்கை</h2>
+        <p>தேதி: ${new Date().toLocaleDateString('ta-IN')}</p>
+        <table><thead><tr><th>#</th><th>பங்கு</th><th>விலை</th><th>மாற்றம்%</th><th>சிக்னல்</th><th>⭐ ஸ்கோர்</th><th>Target</th><th>Stop Loss</th><th>காரணம்</th></tr></thead><tbody>`;
+        stocks.forEach((s,i) => {
+            let targetClass = (s.signal === "STRONG BUY" || s.signal === "BUY") ? "target-badge" : "sell-target-badge";
+            html += `<tr><td>${i+1}</td><td>${s.symbol}</td><td>₹${s.ltp}</td><td>${s.pct}%</td><td>${s.signal}</td><td>${s.score}</td>
+            <td><span class="${targetClass}">₹${s.target}</span></td><td><span class="${targetClass}">₹${s.stopLoss}</span></td><td>${s.reason}</td></tr>`;
+        });
+        html += `</tbody></table><p>⭐ ஸ்கோர்: 80-100: STRONG BUY | 65-79: BUY | 50-64: HOLD | 35-49: WEAK SELL | 0-34: STRONG SELL</p></body></html>`;
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.print();
+    }
+    
+    function shareSelectedStocks() {
+        if(selectedTopStocks.size === 0) { alert("முதலில் பங்குகளைத் தேர்ந்தெடுக்கவும்"); return; }
+        let stocks = Array.from(selectedTopStocks).sort().map(i => highlightedStocks[i]);
+        let msg = "📈 *தேர்ந்தெடுக்கப்பட்ட பங்கு பரிந்துரைகள்* 📈\n\n";
+        msg += `📅 ${new Date().toLocaleDateString('ta-IN')}\n`;
+        msg += `📊 தேர்ந்தெடுக்கப்பட்டவை: ${stocks.length}\n\n`;
+        stocks.forEach((s,i) => {
+            msg += `${i+1}. *${s.symbol}* | ⭐ ${s.score} | ${s.signal}\n`;
+            msg += `   விலை: ₹${s.ltp} | மாற்றம்: ${s.pct}%\n`;
+            msg += `   🎯 Target: ₹${s.target} | ⛔ SL: ₹${s.stopLoss}\n`;
+            msg += `   📌 ${s.reason.substring(0,50)}\n\n`;
+        });
+        msg += `\n⭐ ஸ்கோர்: 80-100: STRONG BUY | 65-79: BUY | 50-64: HOLD | 35-49: WEAK SELL | 0-34: STRONG SELL`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+    
+    function exportData() {
+        if(!finalArray.length) { alert("முதலில் பகுப்பாய்வு செய்யவும்"); return; }
+        let csv = "எண்,பங்கு,விலை,மாற்றம்%,Series,சிக்னல்,ஸ்கோர்,பரிந்துரை,காரணம்,காரணங்கள் எண்,Target,Stop Loss\n";
+        finalArray.forEach((s,i) => {
+            csv += `${i+1},${s.symbol},${s.ltp},${s.pct},${s.series},${s.signal},${s.score},${s.recommendation},"${s.reason}",${s.reasonCount},${s.target},${s.stopLoss}\n`;
+        });
+        let blob = new Blob([csv], {type: 'text/csv'});
+        let a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'stock_analysis_report.csv';
+        a.click();
+    }
+    
+    function saveToLocalStorage() {
+        if(!finalArray.length) { alert("முதலில் பகுப்பாய்வு செய்யவும்"); return; }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ storage, finalArray, highlightedStocks, columnMapping }));
+        alert("✅ தரவு சேமிக்கப்பட்டது!");
+    }
+    
+    function loadFromLocalStorage() {
+        let saved = localStorage.getItem(STORAGE_KEY);
+        if(!saved) { alert("சேமிக்கப்பட்ட தரவு இல்லை"); return; }
+        let data = JSON.parse(saved);
+        storage = data.storage || {};
+        finalArray = data.finalArray || [];
+        highlightedStocks = data.highlightedStocks || [];
+        columnMapping = data.columnMapping || columnMapping;
+        if(finalArray.length) {
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('totalS').innerHTML = finalArray.length;
+            render();
+            alert(`✅ ${finalArray.length} பங்குகள் ஏற்றப்பட்டன`);
+            if(highlightedStocks.length) showHighlightedStocks();
+        } else { alert("தரவு காலியாக உள்ளது"); }
+    }
+</script>
+</body>
+</html>
